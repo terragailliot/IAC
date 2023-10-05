@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Cloud9 Instance with Ubuntu
+
+Resources:
+
+  Cloud9InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties: 
+      Path: "/"
+      Roles: 
+        - Ref: "Cloud9EC2Role"
+
+  Cloud9EC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - ec2.amazonaws.com
+            Action: 
+              - 'sts:AssumeRole'
+      Path: "/"
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AdministratorAccess  # Note: Adjust the permissions according to the principle of least privilege
+
+  Cloud9Environment:
+    Type: 'AWS::Cloud9::EnvironmentEC2'
+    Properties: 
+      Repositories: []  # Optionally, add repositories
+      AutomaticStopTimeMinutes: 30  # Automatically stop the instance after 30 minutes of inactivity
+      InstanceType: "t2.micro"  # Adjust as needed
+      SubnetId: "subnet-XXXXXXXXXXXXXXXXX"  # Replace with your Subnet ID
+      Description: "Cloud9 Ubuntu Environment"
+      ConnectionType: "CONNECT_SSM"  # AWS Systems Manager (SSM) for SSH access
+      OwnerArn: "arn:aws:iam::XXXXXXXXXXXX:user/YourUsername"  # Replace with your user ARN
+
+  Cloud9Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+      InstanceType: 't2.micro'
+      KeyName: 'YourKeyPair'  # Replace with your key pair name
+      ImageId: 'ami-xxxxx'  # Replace with the AMI ID of Ubuntu
+      IamInstanceProfile: 
+        Ref: 'Cloud9InstanceProfile'
+      SecurityGroupIds: 
+        - "sg-XXXXXXXXXXXXXXXXX"  # Replace with your Security Group ID
