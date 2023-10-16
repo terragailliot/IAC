@@ -1,104 +1,27 @@
 #!/bin/bash
-
 # Author: github.com/trevor256
-# Summary: Check OS, install and configure applications.
+# Summary: Check OS, install and configure applications for a desktop or server.
 # Supported: Debian
 
     CLI_APPS="default-jdk default-jre maven nodejs npm pip transmission-cli zsh \
-              silversearcher-ag tmate fzf lynis curl ffmpeg neovim nmap tshark"
+              silversearcher-ag tmate fzf curl ffmpeg nmap tshark"
    
     APT_APPS="krita inkscape blender kdenlive obs-studio audacity flatpak chromium"
 
-setup() {
-    #set -e
-    # check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
-    # grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
-    # netselect-apt
-    sudo apt update && sudo apt install -y $CLI_APPS
-    sudo npm install -g nodemon
+_setup() {
+     apt update &&  apt install -y $CLI_APPS
+     npm install -g nodemon
 }
-
-zsh() {
+_zsh() {
     sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-    sudo git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-    sudo git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+     git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
+     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
     sed -i "/^plugins=/ s/)/ zsh-autosuggestions zsh-syntax-highlighting)/" ~/.zshrc
     sed -i '/# Enable spelling correction/ a setopt CORRECT' ~/.zshrc
     sed -i '/# Adjust the correction style (optional)/ a SPROMPT="CORRECT %{$fg[red]%}%R%f%{$reset_color%} ? "' ~/.zshrc
-    sudo chsh -s $(which zsh)
+     chsh -s $(which zsh)
     source ~/.zshrc
 }
-
-neovim() {
-# Install other stuff and make it usable as a IDE for JS and J
-sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-
-mkdir -p ~/.config/nvim && touch ~/.config/nvim/init.vim
-cat <<EOF > ~/.config/nvim/init.vim
-" Your Neovim configuration goes here
-
-"clip board"
-set clipboard=unnamedplus
-
-"allow mouse"
-set mouse=a
-
-" Example: Set your leader key
-let mapleader = "\<Space>"
-
-" Example: Install and manage plugins using Vim-Plug
-call plug#begin('~/.config/nvim/plugged')
-
-" Essential Plugins
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
-Plug 'scrooloose/nerdtree'
-Plug 'Xuyuanp/nerdtree-git-plugin'
-Plug 'mhinz/vim-startify'
-Plug 'tpope/vim-fugitive'
-
-" Code Editing and Productivity
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-commentary'
-Plug 'jiangmiao/auto-pairs'
-Plug 'preservim/nerdcommenter'
-Plug 'itchyny/lightline.vim'
-
-" Git Integration
-Plug 'tpope/vim-git'
-
-" Themes
-Plug 'morhetz/gruvbox'
-
-" Autocompletion and Linting with Coc.nvim
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-let g:coc_global_extensions = ['coc-java', 'coc-tsserver', 'coc-python', 'coc-sh']
-
-" Syntax Highlighting and Linting for Various Languages
-Plug 'elzr/vim-json'
-Plug 'leafgarland/typescript-vim'
-Plug 'pangloss/vim-javascript'
-Plug 'HerringtonDarkholme/yats.vim'
-Plug 'vim-python/python-syntax'
-
-" Add any other plugins you prefer below this line
-
-" End of Vim-Plug section
-call plug#end()
-
-" Configure Coc.nvim for JavaScript, Python, Java, and Bash
-if has('nvim')
-  autocmd FileType javascript,json setl omnifunc=coc#_select_confirm
-  autocmd FileType python setl omnifunc=coc#_select_confirm
-  autocmd FileType java setl omnifunc=coc#_select_confirm
-  autocmd FileType sh setl omnifunc=coc#_select_confirm
-endif
-
-EOF
-nvim -c 'PlugInstall | q | q'
-}
-
 _git() {
     read -p "Enter your Git user.name: " git_name
     read -p "Enter your Git user.email: " git_email
@@ -108,45 +31,47 @@ _git() {
 
 _docker(){
     # Add Docker's official GPG key:
-sudo apt-get update
-sudo apt-get install ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
+ apt-get update
+ apt-get install ca-certificates curl gnupg
+ install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg |  gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+ chmod a+r /etc/apt/keyrings/docker.gpg
 
 # Add the repository to Apt sources:
 echo \
   "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   tee /etc/apt/sources.list.d/docker.list > /dev/null
+ apt-get update
+ apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 }
 
 _aws_gcloud() {
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip
-    sudo ./aws/install
+     ./aws/install
     
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-    sudo apt-get install apt-transport-https ca-certificates gnupg
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-    sudo apt-get update && sudo apt-get install google-cloud-sdk
-    sudo aws configure
-    sudo gcloud init
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" |  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+     apt-get install apt-transport-https ca-certificates gnupg
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg |  apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+     apt-get update &&  apt-get install google-cloud-sdk
+     aws configure
+     gcloud init
 }
 
 _desktop(){
-    sudo apt update && sudo apt install -y $APT_APPS
+     apt update &&  apt install -y $APT_APPS
     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
     flatpak install flathub
-    sudo npm install -g nodemon react jest typescript
+     npm install -g nodemon react jest
     wget https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.0.4.17212.tar.gz -O jb.tar.gz
-    sudo tar -xzf jb.tar.gz -C /opt
-    sudo ./opt/jetbrains-toolbox
+     tar -xzf jb.tar.gz -C /opt
+     ./opt/jetbrains-toolbox
 }    
 
 _server(){
-    #Mount Drives
+# check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
+grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
+
 mkdir /jelly /storage
 #mkdir /jelly/downloads #/storage/config /jelly/movies /jelly/shows
 #make it so of already written it wont write again
@@ -203,7 +128,6 @@ main() {
                     _setup
                     _desktop
                     _zsh
-                    _neovim
                     _docker
                     _git
                     _aws_gcloud
@@ -219,45 +143,15 @@ main() {
                if hostnamectl | grep "Debian"; then
                     _setup
                     _server
-                    _zsh
-                    _neovim
                     _docker
-                    _git
                     _aws_gcloud
                     echo "done"
             
                 else
                     echo "OS not supported or found."
                     exit 1
-                fi
-            
-            ;;
-        debian_cloud_server|dcs)
-               if hostnamectl | grep "Debian"; then
-                    _setup
-                    echo "done"
-            
-                else
-                    echo "OS not supported or found."
-                    exit 1
-                fi
-            
-            ;;
-        cloud9|c9)
-               if hostnamectl | grep "Ubuntu"; then
-                    _setup
-                    _zsh
-                    _docker
-                    _git
-                    _aws_gcloud
-                    echo "done"
-            
-                else
-                    echo "OS not supported or found."
-                    exit 1
-                fi
-            
-            ;;
+                fi   
+             ;;
         custom|c)
             echo"custom"s
             ;;
