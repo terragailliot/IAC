@@ -6,7 +6,8 @@
     CLI_APPS="default-jdk default-jre maven nodejs npm pip transmission-cli zsh \
               silversearcher-ag tmate fzf curl ffmpeg nmap tshark"
    
-    APT_APPS="krita inkscape blender kdenlive obs-studio audacity flatpak chromium"
+    APT_APPS="krita inkscape blender kdenlive obs-studio audacity flatpak chromium \
+              mintstick"
 
 _setup() {
      apt update &&  apt install -y $CLI_APPS
