@@ -1,0 +1,150 @@
+version: "3.9"
+name: media-stack
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=YOUR_EMAIL"
+      - "--certificatesresolvers.myresolver.acme.storage=acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
+    networks:
+      - media-network
+    restart: always
+
+  vpn:
+    image: dperson/openvpn-client
+    container_name: vpn
+    cap_add:
+      - net_admin
+    networks:
+      - media-network
+    restart: always
+    volumes:
+      - "/path/to/your/vpn/config.ovpn:/vpn/vpn.conf"
+    environment:
+      - PUID=1000
+      - PGID=1000
+    command: '-r 192.168.1.0/24'
+
+  transmission:
+    container_name: transmission
+    image: linuxserver/transmission:4.0.3
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - USER=admin
+      - PASS=transmission
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    restart: always
+    networks:
+      - media-network
+
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:4.5.2
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - 7878:7878
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    restart: always
+    networks:
+      - media-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.yourdomain.com`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=myresolver"
+
+  sonarr:
+    image: linuxserver/sonarr:4.0.0-develop
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    ports:
+      - 8989:8989
+    restart: always
+    networks:
+      - media-network
+
+  jellyfin:
+    image: linuxserver/jellyfin:10.8.10
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    ports:
+      - 8096:8096
+      - 7359:7359/udp
+      - 8920:8920
+    restart: always
+    networks:
+      - media-network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+    ports:
+      - 9696:9696
+    restart: always
+    networks:
+      - media-network
+
+  requestrr:
+    image: lscr.io/linuxserver/requestrr:latest
+    container_name: requestrr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+    ports:
+      - 4545:4545
+    restart: always
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge
