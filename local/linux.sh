@@ -1,161 +1,209 @@
 #!/bin/bash
 # Author: github.com/trevor256
-# Summary: Check OS, install and configure applications for a desktop or server.
+# Summary: install and configure applications for a desktop or server.
 # Supported: Debian
 
-    CLI_APPS="default-jdk default-jre maven nodejs npm pip transmission-cli zsh \
-              silversearcher-ag tmate fzf curl ffmpeg nmap tshark"
-   
-    APT_APPS="krita inkscape blender kdenlive obs-studio audacity flatpak chromium \
+    CLI_APPS="default-jdk default-jre maven nodejs npm pip transmission-cli tree \
+              ufw fail2ban lynis glances rkhunter logwatch clamav clamav-daemon clamav-freshclam
+              ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
+
+    GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium \
               mintstick"
 
+    NPM_APPS="nodemon bash-language-server react jest"
+
 _setup() {
-     apt update &&  apt install -y $CLI_APPS
-     npm install -g nodemon
+# check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
+    systemctl disable NetworkManager-wait-online.service
+    grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
+    apt update && apt install -y "$CLI_APPS"
+    npm install -g "$NPM_APPS"
 }
-_zsh() {
-    sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-     git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
-    sed -i "/^plugins=/ s/)/ zsh-autosuggestions zsh-syntax-highlighting)/" ~/.zshrc
-    sed -i '/# Enable spelling correction/ a setopt CORRECT' ~/.zshrc
-    sed -i '/# Adjust the correction style (optional)/ a SPROMPT="CORRECT %{$fg[red]%}%R%f%{$reset_color%} ? "' ~/.zshrc
-     chsh -s $(which zsh)
-    source ~/.zshrc
-}
+
 _git() {
-    read -p "Enter your Git user.name: " git_name
-    read -p "Enter your Git user.email: " git_email
+    read -r -p "Enter Git user.name: " git_name
+    read -r -p "Enter Git user.email: " git_email
     git config --global user.name "$git_name"
     git config --global user.email "$git_email"
+
+    read -r -p "cache git credentials? (yes/no): " git_cache
+    if [[ $git_cache == "yes" ]]; then
+        git config --global credential.helper 'cache --timeout=259200' # 3days
+    fi
+
+    git config --global color.ui true
+    git config --global help.autocorrect 1
 }
 
 _docker(){
-    # Add Docker's official GPG key:
- apt-get update
- apt-get install ca-certificates curl gnupg
- install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg |  gpg --dearmor -o /etc/apt/keyrings/docker.gpg
- chmod a+r /etc/apt/keyrings/docker.gpg
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/debian/gpg |  gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
 
-# Add the repository to Apt sources:
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-   tee /etc/apt/sources.list.d/docker.list > /dev/null
- apt-get update
- apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    echo \
+    "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+    "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    apt-get update
+    apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+
+    usermod -aG docker "$(whoami)"
 }
 
 _aws_gcloud() {
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip
-     ./aws/install
-    
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" |  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-     apt-get install apt-transport-https ca-certificates gnupg
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg |  apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-     apt-get update &&  apt-get install google-cloud-sdk
-     aws configure
-     gcloud init
+   if ! command -v aws &> /dev/null; then
+        echo "Installing AWS CLI..."
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm -rf awscliv2.zip aws  # Cleanup
+        echo "AWS CLI installed."
+        aws configure
+    else
+        echo "AWS CLI is already installed."
+    fi
+
+    if ! command -v gcloud &> /dev/null; then
+        echo "Installing Google Cloud SDK..."
+        sudo apt-get install -y apt-transport-https ca-certificates gnupg
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+        sudo apt-get update
+        sudo apt-get install -y google-cloud-sdk
+        echo "Google Cloud SDK installed."
+        gcloud init
+    else
+        echo "Google Cloud SDK is already installed."
+    fi
+
 }
 
-_desktop(){
-     apt update &&  apt install -y $APT_APPS
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    flatpak install flathub
-     npm install -g nodemon react jest
+_desktop() {
+    apt install -y "$GUI_APPS"
+
+    wget https://dl.4kdownload.com/app/4kvideodownloaderplus_1.2.4-1_amd64.deb?source=website -O 4kvideodownloaderplus_1.2.4-1_amd64.deb
+
+    dpkg -i 4kvideodownloaderplus_1.2.4-1_amd64.deb
+
     wget https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.0.4.17212.tar.gz -O jb.tar.gz
-     tar -xzf jb.tar.gz -C /opt
-     ./opt/jetbrains-toolbox
-}    
+    tar -xzf jb.tar.gz -C /opt
+    ./opt/jetbrains-toolbox
+}
 
 _server(){
-# check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
-grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
+    apt install -y nvidia-cuda-toolkit nvidia-driver nvidia-container-toolkit
 
-mkdir /jelly /storage
-#mkdir /jelly/downloads #/storage/config /jelly/movies /jelly/shows
-#make it so of already written it wont write again
-echo "UUID=9067c3d0-babc-4ffa-b8b9-4212a4fe4cea /jelly ext4 defaults 0 0" >> /etc/fstab
-echo "UUID=16cc2161-d654-4cf4-a954-a7d61892d08c /storage ext4 defaults 0 0" >> /etc/fstab
-systemctl daemon-reload && mount --all
+    [ -d "/jelly" ] || mkdir /jelly
+    mkdir /jelly /storage
+    mkdir /jelly/downloads /storage/config /jelly/movies /jelly/shows
+    echo "UUID=9067c3d0-babc-4ffa-b8b9-4212a4fe4cea /jelly ext4 defaults 0 0" >> /etc/fstab
+    echo "UUID=16cc2161-d654-4cf4-a954-a7d61892d08c /storage ext4 defaults 0 0" >> /etc/fstab
+    systemctl daemon-reload && mount --all
 
-#software install
-apt install -y nvidia-cuda-toolkit nvidia-driver
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && curl -s -L https://nvidia.github.io/libnvidia-container/debian11/libnvidia-container.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
-#dpkg --configure -a
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-      && curl -s -L https://nvidia.github.io/libnvidia-container/debian11/libnvidia-container.list | \
-            sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-            tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-apt update
-apt install -y nvidia-container-toolkit
-nvidia-ctk runtime configure --runtime=docker
-systemctl restart docker
+    apt update
+    nvidia-ctk runtime configure --runtime=docker
+    systemctl restart docker
 
-#ffmpeg with nvidia hardware acceleration
-apt -y install build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev
-mkdir ~/nvidia/ && cd ~/nvidia/
-git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
-cd nv-codec-headers && make install
-cd ~/nvidia/
-git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg/
-apt install -y build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
-cd ~/nvidia/ffmpeg/
-./configure --pkg-config-flags="--static" --enable-nonfree --enable-gpl --enable-version3 \
---enable-libmp3lame --enable-libvpx --enable-libopus \
---enable-opencl --enable-libxcb \
---enable-opengl --enable-nvenc --enable-vaapi \
---enable-vdpau --enable-ffplay --enable-ffprobe \
---enable-libxvid \
---enable-libx264 --enable-libx265 --enable-openal \
- --enable-cuda-nvcc --enable-cuvid --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
-make -j $(nproc)
-ls -l ffmpeg
-echo 'export PATH=$PATH:/root/nvidia/ffmpeg' >> .bashrc
+    #ffmpeg with nvidia hardware acceleration
+    apt -y install build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev
+    mkdir ~/nvidia/ && cd ~/nvidia/
+    git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+    cd nv-codec-headers && make install
+    cd ~/nvidia/
+    git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg/
+    apt install -y build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
+    cd ~/nvidia/ffmpeg/
+    ./configure --pkg-config-flags="--static" --enable-nonfree --enable-gpl --enable-version3 \
+    --enable-libmp3lame --enable-libvpx --enable-libopus \
+    --enable-opencl --enable-libxcb \
+    --enable-opengl --enable-nvenc --enable-vaapi \
+    --enable-vdpau --enable-ffplay --enable-ffprobe \
+    --enable-libxvid \
+    --enable-libx264 --enable-libx265 --enable-openal \
+    --enable-cuda-nvcc --enable-cuvid --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
+    make -j "$(nproc)"
+    ls -l ffmpeg
+    echo "export PATH=$PATH:/root/nvidia/ffmpeg" >> .bashrc
 
-apt -y autoremove
-docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always --net=host -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/storage portainer/portainer-ce:latest 
+    #sudo ufw enable
+    #config ufw
 
 }
 
+_custom_commands(){ #
+cat <<EOL >> ~/.bashrc
+    greet() {
+        echo "Hello, \$1!"
+    }
+EOL
+
+   source ~/.bashrc
+}
+
+_log_time() {
+    local func_name="$1"
+    local start_time=$(date +"%T")
+    echo "[$start_time] Starting function: $func_name"
+    "$func_name"
+    local end_time=$(date +"%T")
+    echo "[$end_time] Finished function: $func_name"
+}
+_security(){
+    rkhunter --update
+    rkhunter --propupd
+    rkhunter -c --enable all --disable none
+
+    freshclam
+    clamscan -r /home
+}
 main() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "run this script with sudo or as root."
+        exit 1
+    fi
+
     echo "debian_desktop (dd), debian_server (ds), debian_cloud_server (dcs), cloud9 (c9), custom (c)"
-    read -p "what kind of linux computer would you like to set up? " action
-    
+    read -r -p "what kind of linux computer would you like to set up? " action
+
     case $action in
         debian_desktop|dd)
-                if hostnamectl | grep "Debian"; then
-                    _setup
-                    _desktop
-                    _zsh
-                    _docker
-                    _git
-                    _aws_gcloud
+                if uname -a | grep "Debian"; then
+                   _log_time _setup
+                   _log_time _desktop
+                   _log_time _docker
+                   _log_time _git
+                   _log_time _aws_gcloud
+                   _log_time _security
                     echo "done"
-            
+
                 else
-                    echo "OS not supported or found."
+                    echo "Debian not found."
                     exit 1
                 fi
-            
+
             ;;
         debian_server|ds)
-               if hostnamectl | grep "Debian"; then
-                    _setup
-                    _server
-                    _docker
-                    _aws_gcloud
+               if uname -a | grep "Debian"; then
+                    _log_time _setup
+                    _log_time _server
+                    _log_time _docker
+                    _log_time _aws_gcloud
+                    _log_time _security
                     echo "done"
-            
+
                 else
-                    echo "OS not supported or found."
+                    echo "Debian not found."
                     exit 1
-                fi   
+                fi
              ;;
-        custom|c)
-            echo"custom"s
-            ;;
     esac
 }
 main
