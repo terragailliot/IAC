@@ -1,23 +1,26 @@
 #!/bin/bash
-# Author: github.com/trevor256
-# Summary: install and configure applications for a desktop or server.
+# Author   : github.com/trevor256
+# Summary  : install and configure applications for a desktop, server, or cloud.
 # Supported: Debian
 
-    CLI_APPS="default-jdk default-jre maven nodejs npm pip transmission-cli tree \
-              ufw fail2ban lynis glances rkhunter logwatch clamav clamav-daemon clamav-freshclam
+# make a bootable usb
+# sudo fdisk -l
+# umount /dev/sd??
+# sudo dd if=debian-12.2.0-amd64-DVD-1.iso of=/dev/sdc bs=4M status=progress oflag=sync
+
+    CLI_APPS="default-jdk default-jre maven nodejs npm transmission-cli tree rsync \
+              ufw fail2ban lynis rkhunter clamav clamav-daemon clamav-freshclam \
               ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
 
-    GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium \
-              mintstick"
+    GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium"
 
     NPM_APPS="nodemon bash-language-server react jest"
 
 _setup() {
 # check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
-    systemctl disable NetworkManager-wait-online.service
+    systemctl disable NetworkManager-wait-online.service # saves 6 seconds on boot
     grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
     apt update && apt install -y "$CLI_APPS"
-    npm install -g "$NPM_APPS"
 }
 
 _git() {
@@ -80,17 +83,19 @@ _aws_gcloud() {
     fi
 
 }
+# to do
+_amd_pro() {
+    sudo apt install build-essential dkms
+    sudo dpkg -i amdgpu-pro-driver.deb
+    sudo amdgpu-install --usecase=graphics,opencl --accept-eula
+    # check after install dpkg -l | grep amdgpu-pro
 
+}
 _desktop() {
-    apt install -y "$GUI_APPS"
+    apt install -y "$GUI_APPS" && npm install -g "$NPM_APPS"
 
     wget https://dl.4kdownload.com/app/4kvideodownloaderplus_1.2.4-1_amd64.deb?source=website -O 4kvideodownloaderplus_1.2.4-1_amd64.deb
-
     dpkg -i 4kvideodownloaderplus_1.2.4-1_amd64.deb
-
-    wget https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.0.4.17212.tar.gz -O jb.tar.gz
-    tar -xzf jb.tar.gz -C /opt
-    ./opt/jetbrains-toolbox
 }
 
 _server(){
@@ -137,17 +142,6 @@ _server(){
     #config ufw
 
 }
-
-_custom_commands(){ #
-cat <<EOL >> ~/.bashrc
-    greet() {
-        echo "Hello, \$1!"
-    }
-EOL
-
-   source ~/.bashrc
-}
-
 _log_time() {
     local func_name="$1"
     local start_time=$(date +"%T")
@@ -181,7 +175,7 @@ main() {
                    _log_time _docker
                    _log_time _git
                    _log_time _aws_gcloud
-                   _log_time _security
+# rsync or backup and neovim setup
                     echo "done"
 
                 else
@@ -196,7 +190,6 @@ main() {
                     _log_time _server
                     _log_time _docker
                     _log_time _aws_gcloud
-                    _log_time _security
                     echo "done"
 
                 else
