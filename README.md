@@ -9,10 +9,10 @@
 </br>
 
 ```bash
-curl https://raw.githubusercontent.com/trevor256/configs/main/linux_desktop.sh | sudo sh
+curl https://raw.githubusercontent.com/trevor256/IAC/main/local/linux.sh | sudo sh
 ```
 ```bash
-wget -O - -o /dev/null https://raw.githubusercontent.com/trevor256/configs/main/linux_desktop.sh | sudo sh
+wget -O - -o /dev/null https://raw.githubusercontent.com/trevor256/IAC/main/local/linux.sh | sudo sh
 ```
 </br>
 
