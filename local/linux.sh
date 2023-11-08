@@ -175,7 +175,7 @@ main() {
                    _log_time _docker
                    _log_time _git
                    _log_time _aws_gcloud
-# rsync or backup and neovim setup
+# rsync or backup and neovim setup ffmpeg compression
                     echo "done"
 
                 else
