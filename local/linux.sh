@@ -8,8 +8,9 @@
 # umount /dev/sd??
 # sudo dd if=debian-12.2.0-amd64-DVD-1.iso of=/dev/sdc bs=4M status=progress oflag=sync
 
-    CLI_APPS="default-jdk default-jre maven nodejs npm transmission-cli tree rsync neovim \
-              ufw fail2ban lynis rkhunter clamav clamav-daemon clamav-freshclam \
+    CLI_APPS="default-jdk default-jre maven nodejs npm transmission-cli tree rsync \
+              ufw fail2ban rkhunter clamav clamav-daemon clamav-freshclam lynis \
+              libpam-tmpdir apt-listbugs needrestart \
               ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
 
     GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium"
@@ -17,23 +18,15 @@
     NPM_APPS="nodemon bash-language-server react jest"
 
 _setup() {
-# check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
+    # check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
     systemctl disable NetworkManager-wait-online.service # saves 6 seconds on boot
     grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
-    apt update && apt install -y "$CLI_APPS"
+    #stop ssh root access #PermitRootLogin prohibit-password
+    # systemctl restart ssh
+    echo "wireshark-common wireshark-common/install-setuid boolean false" | debconf-set-selections
+    apt update && apt install -y $CLI_APPS
 }
-_nvim() {
-    sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-    # echo plugin setup into .config/init.vim
-    #:PlugInstall
-    #:NERDTreeToggle
-    #:Files
-    #:CocInstall coc-java
-    #:TSInstall java
-    # add mouse support
-    # get new theme
-}
+
 _git() {
     read -r -p "Enter Git user.name: " git_name
     read -r -p "Enter Git user.email: " git_email
@@ -60,7 +53,7 @@ _docker(){
     tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     apt-get update
-    apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
 
@@ -75,6 +68,8 @@ _aws_gcloud() {
         sudo ./aws/install
         rm -rf awscliv2.zip aws  # Cleanup
         echo "AWS CLI installed."
+        aws configure set default.region us-east-1
+        aws configure set default.output json
         aws configure
     else
         echo "AWS CLI is already installed."
@@ -94,16 +89,8 @@ _aws_gcloud() {
     fi
 
 }
-# to do
-_amd_pro() {
-    sudo apt install build-essential dkms
-    sudo dpkg -i amdgpu-pro-driver.deb
-    sudo amdgpu-install --usecase=graphics,opencl --accept-eula
-    # check after install dpkg -l | grep amdgpu-pro
-
-}
 _desktop() {
-    apt install -y "$GUI_APPS" && npm install -g "$NPM_APPS"
+    apt install -y $GUI_APPS && npm install -g $NPM_APPS
 
     wget https://dl.4kdownload.com/app/4kvideodownloaderplus_1.2.4-1_amd64.deb?source=website -O 4kvideodownloaderplus_1.2.4-1_amd64.deb
     dpkg -i 4kvideodownloaderplus_1.2.4-1_amd64.deb
@@ -153,39 +140,27 @@ _server(){
     #config ufw
 
 }
-_log_time() {
-    local func_name="$1"
-    local start_time=$(date +"%T")
-    echo "[$start_time] Starting function: $func_name"
-    "$func_name"
-    local end_time=$(date +"%T")
-    echo "[$end_time] Finished function: $func_name"
-}
 _security(){
-    rkhunter --update
     rkhunter --propupd
     rkhunter -c --enable all --disable none
 
     freshclam
     clamscan -r /home
+
+    lynis
 }
 main() {
-    if [ "$EUID" -ne 0 ]; then
-        echo "run this script with sudo or as root."
-        exit 1
-    fi
-
     echo "debian_desktop (dd), debian_server (ds), debian_cloud_server (dcs), cloud9 (c9), custom (c)"
     read -r -p "what kind of linux computer would you like to set up? " action
 
     case $action in
         debian_desktop|dd)
                 if uname -a | grep "Debian"; then
-                   _log_time _setup
-                   _log_time _desktop
-                   _log_time _docker
-                   _log_time _git
-                   _log_time _aws_gcloud
+                   time _setup
+                   time _desktop
+                   time _docker
+                   time _git
+                   time _aws_gcloud
 # rsync or backup and neovim setup ffmpeg compression
                     echo "done"
 
