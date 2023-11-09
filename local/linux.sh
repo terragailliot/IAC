@@ -8,7 +8,7 @@
 # umount /dev/sd??
 # sudo dd if=debian-12.2.0-amd64-DVD-1.iso of=/dev/sdc bs=4M status=progress oflag=sync
 
-    CLI_APPS="default-jdk default-jre maven nodejs npm transmission-cli tree rsync \
+    CLI_APPS="default-jdk default-jre maven nodejs npm transmission-cli tree rsync neovim \
               ufw fail2ban lynis rkhunter clamav clamav-daemon clamav-freshclam \
               ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
 
@@ -22,7 +22,18 @@ _setup() {
     grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
     apt update && apt install -y "$CLI_APPS"
 }
-
+_nvim() {
+    sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+    # echo plugin setup into .config/init.vim
+    #:PlugInstall
+    #:NERDTreeToggle
+    #:Files
+    #:CocInstall coc-java
+    #:TSInstall java
+    # add mouse support
+    # get new theme
+}
 _git() {
     read -r -p "Enter Git user.name: " git_name
     read -r -p "Enter Git user.email: " git_email
