@@ -19,8 +19,8 @@
 
 _setup() {
     # check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
-    systemctl disable NetworkManager-wait-online.service # saves 6 seconds on boot
-    grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
+    # systemctl disable NetworkManager-wait-online.service # saves 6 seconds on boot
+    # grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
     #stop ssh root access #PermitRootLogin prohibit-password
     # systemctl restart ssh
     echo "wireshark-common wireshark-common/install-setuid boolean false" | debconf-set-selections
