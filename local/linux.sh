@@ -4,8 +4,7 @@
 # Supported: Debian
 
     CLI_APPS="default-jdk default-jre maven gradle nodejs npm transmission-cli tree rsync \
-              ufw fail2ban rkhunter clamav clamav-daemon clamav-freshclam lynis \
-              libpam-tmpdir apt-listbugs needrestart \
+              ufw fail2ban rkhunter lynis libpam-tmpdir apt-listbugs needrestart \
               ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
 
     GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium"
@@ -18,21 +17,25 @@ _setup() {
 }
 _desktop() {
     apt install -y $GUI_APPS && npm install -g $NPM_APPS
-    wget https://discord.com/api/download?platform=linux&format=deb -O discord-0.0.35.deb
-    dpkg -i discord-0.0.35.deb
-    
+    wget -O discord.deb "https://discordapp.com/api/download?platform=linux&format=deb"
+    dpkg -i discord.deb
+    discord
+
     wget https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.1.0.18144.tar.gz  -O jetbrains-toolbox-2.1.0.18144.tar.gz
     tar -xzf jetbrains-toolbox-2.1.0.18144.tar.gz
     ./jetbrains-toolbox-2.1.0.18144/jetbrains-toolbox
 
     wget https://cdn.akamai.steamstatic.com/client/installer/steam.deb -O steam.deb
     dpkg -i steam.deb
-    
+    steam
+
     wget https://dl.4kdownload.com/app/4kvideodownloaderplus_1.2.4-1_amd64.deb?source=website -O 4kvideodownloaderplus_1.2.4-1_amd64.deb
     dpkg -i 4kvideodownloaderplus_1.2.4-1_amd64.deb
+    4kvideodownloaderplus
 
     wget https://atlauncher.com/download/deb -O atlauncher.deb
     dpkg -i atlauncher.deb
+    atlauncher
 }
 
 _server(){
@@ -40,14 +43,14 @@ _server(){
     # check boot times with: systemd-analyze blame set grub timeout to 0 saves 10sec on boot
     systemctl disable NetworkManager-wait-online.service # saves 6 seconds on boot
     grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2
-    
+
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
     if grep -q "^PermitRootLogin" $SSH_CONFIG_FILE; then
         sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' $SSH_CONFIG_FILE
     else
         echo "PermitRootLogin no" >> $SSH_CONFIG_FILE
     fi
-    
+
     [ -d "/jelly" ] || mkdir /jelly
     mkdir /jelly /storage
     mkdir /jelly/downloads /storage/config /jelly/movies /jelly/shows
@@ -73,10 +76,7 @@ fi
 
 # Update and Install Dependencies
 apt update
-apt -y install build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev libbz2-dev \
-libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev \
-libxvidcore-dev libopenal-dev libopus-dev libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev \
-texi2html yasm zlib1g-dev build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
+apt -y install build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
 
 mkdir -p ~/nvidia/ && cd ~/nvidia/
 git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
@@ -182,9 +182,6 @@ _aws_gcloud() {
 _security(){
     rkhunter --propupd
     rkhunter -c --enable all --disable none
-
-    freshclam
-    clamscan -r /home
 
     lynis
 }
