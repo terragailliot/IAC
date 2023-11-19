@@ -4,7 +4,7 @@
 # Supported: Debian
 
     CLI_APPS="default-jdk default-jre maven gradle nodejs npm transmission-cli tree rsync \
-              ufw fail2ban rkhunter lynis libpam-tmpdir apt-listbugs needrestart \
+              ufw fail2ban rkhunter lynis libpam-tmpdir apt-listbugs needrestart nzbget \
               ripgrep fzf curl ffmpeg nmap tshark shellcheck ca-certificates curl gnupg"
 
     GUI_APPS="krita inkscape blender kdenlive obs-studio audacity chromium"
