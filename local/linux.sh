@@ -19,7 +19,7 @@ _desktop() {
     apt install -y $GUI_APPS && npm install -g $NPM_APPS
     wget -O discord.deb "https://discordapp.com/api/download?platform=linux&format=deb"
     dpkg -i discord.deb
-    discord
+    su - trevor -c "discord"
 
     wget https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.1.0.18144.tar.gz  -O jetbrains-toolbox-2.1.0.18144.tar.gz
     tar -xzf jetbrains-toolbox-2.1.0.18144.tar.gz
@@ -27,15 +27,15 @@ _desktop() {
 
     wget https://cdn.akamai.steamstatic.com/client/installer/steam.deb -O steam.deb
     dpkg -i steam.deb
-    steam
+    su - trevor -c "steam"
 
     wget https://dl.4kdownload.com/app/4kvideodownloaderplus_1.2.4-1_amd64.deb?source=website -O 4kvideodownloaderplus_1.2.4-1_amd64.deb
     dpkg -i 4kvideodownloaderplus_1.2.4-1_amd64.deb
-    4kvideodownloaderplus
+    su - trevor -c "4kvideodownloaderplus"
 
     wget https://atlauncher.com/download/deb -O atlauncher.deb
     dpkg -i atlauncher.deb
-    atlauncher
+    su - trevor -c "atlauncher"
 }
 
 _server(){
