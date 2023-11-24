@@ -51,15 +51,10 @@ _server(){
     add_to_fstab "16cc2161-d654-4cf4-a954-a7d61892d08c" "/storage" "ext4" "defaults" "0" "0"
     systemctl daemon-reload && mount --all
 
-    apt -y install nvidia-cuda-toolkit nvidia-driver nvidia-container-toolkit build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev \
+    apt -y install nvidia-cuda-toolkit nvidia-driver build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev \
     libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev \
     libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg 
-    curl -s -L https://nvidia.github.io/libnvidia-container/debian12/libnvidia-container.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt update && nvidia-ctk runtime configure --runtime=docker
-    systemctl restart docker
-
+    apt update
     mkdir -p ~/nvidia/ && cd ~/nvidia/
     git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
     cd nv-codec-headers && make install
@@ -78,13 +73,13 @@ _server(){
     echo "export PATH=\$PATH:/root/nvidia/ffmpeg" >> ~/.bashrc
     source ~/.bashrc
 
+    curl https://repo.jellyfin.org/install-debuntu.sh | sudo bash
+
     sed -i 's/^ControlPort=.*/ControlPort=8081/' /path/to/nzbget.conf
     
     service transmission-daemon stop
     sed -i 's/"rpc-port":.*/"rpc-port": 9091,/' /path/to/settings.json
     sudo service transmission-daemon start
-
-
 
 printf "
     version: "3.9"
