@@ -2,13 +2,6 @@
 # Author   : github.com/trevor256
 # Summary  : install and configure applications for linux desktop or server.
 # Supported: Debian
-    NORDVPN_USERNAME='your_username'
-    NORDVPN_PASSWORD='your_password'
-    4kvideodownloaderplus=
-    atlauncher=
-    steam=
-    discord=
-    source ~/.bashrc
 
     CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg shellcheck \
               ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim nginx"
@@ -221,15 +214,14 @@ networks:
     driver: bridge 
     "> /etc/systemd/system/minecraft.service 
 
-    mkdir -p minecraft
+   
     MOD_URL="https://cdn.modrinth.com/data/gvQqBUqZ/versions/2KMrj5c1/lithium-fabric-mc1.20-0.11.2.jar https://cdn.modrinth.com/data/P7dR8mSH/versions/n2c5lxAo/fabric-api-0.83.0%2B1.20.jar"
-    wget -O image.jpg https://pbs.twimg.com/media/E17dVsuVEAIpea1.jpg
-    ffmpeg -i image.jpg -vf "crop=220:220:90:90" output.jpg
-    ffmpeg -i output.jpg -vf "scale=64:64" server-icon.png
-    wget -O  fabric.jar https://meta.fabricmc.net/v2/versions/loader/1.20.2/0.14.24/0.11.2/server/jar &
-    wget -O /mods $MOD_URL &
-    echo 'eula=true' >> eula.txt 
-    echo "java -Xmx4G -jar https://meta.fabricmc.net/v2/versions/loader/1.20.2/0.14.24/0.11.2/server/jar nogui" > run.sh 
+    mkdir -p /minecraft /minecraft/mods
+    wget -O /minecraft/image.jpg https://pbs.twimg.com/media/E17dVsuVEAIpea1.jpg #scale=64:64" server-icon.png 
+    wget -O  /minecraft/fabric.jar https://meta.fabricmc.net/v2/versions/loader/1.20.2/0.14.24/0.11.2/server/jar 
+    wget -O /minecraft/mods $MOD_URL 
+    echo 'eula=true' >> /minecraft/eula.txt 
+    echo "java -Xmx4G -jar fabric.jar nogui" > /minecraft/run.sh 
     printf "[Unit]
     Description=run.sh on startup
     Wants=network.target
@@ -239,20 +231,20 @@ networks:
     Nice=5
     KillMode=control-group
     SuccessExitStatus=0 1
-    ReadWriteDirectories=/home/admin/
-    WorkingDirectory=/home/admin/
-    ExecStart=/home/admin/run.sh
+    ReadWriteDirectories=/minecraft
+    WorkingDirectory=/minecraft
+    ExecStart=/minecraft/run.sh
     
     [Install]
     WantedBy=multi-user.target" > /etc/systemd/system/minecraft.service 
-    wait
     systemctl enable minecraft.service
     systemctl start minecraft.service
 }
 
 _vpn() {
         sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
-        nordvpn login
+        nordvpn whitelist add subnet 192.168.1.0/24
+        nordvpn login --token
         nordvpn connect
 }
 
@@ -290,15 +282,17 @@ _aws_gcloud() {
         sudo ./aws/install
         aws configure set default.region us-east-1
         aws configure set default.output json
-        aws configure set aws_access_key_id $(< path_to_file_containing_access_key)
-        aws configure set aws_secret_access_key $(< path_to_file_containing_secret_key)
+        #aws configure set aws_access_key_id $(< path_to_file_containing_access_key)
+        #aws configure set aws_secret_access_key $(< path_to_file_containing_secret_key)
+        aws configure
         # gcloud init
         echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
         curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
         apt update && apt install -y google-cloud-sdk
-        gcloud auth activate-service-account --key-file=[PATH_TO_KEY_FILE]
-        gcloud config set project [YOUR_PROJECT_ID]
-        gcloud config set compute/zone [YOUR_COMPUTE_ZONE]
+        #gcloud auth activate-service-account --key-file=[PATH_TO_KEY_FILE]
+        #gcloud config set project [YOUR_PROJECT_ID]
+        #gcloud config set compute/zone [YOUR_COMPUTE_ZONE]
+        gcloud init
 }
 _neovim() {
         mkdir -p ~/.config/nvim
