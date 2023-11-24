@@ -24,42 +24,7 @@ services:
     networks:
       - media-network
     restart: always
-
-  vpn:
-    image: dperson/openvpn-client
-    container_name: vpn
-    cap_add:
-      - net_admin
-    networks:
-      - media-network
-    restart: always
-    volumes:
-      - "/path/to/your/vpn/config.ovpn:/vpn/vpn.conf"
-    environment:
-      - PUID=1000
-      - PGID=1000
-    command: '-r 192.168.1.0/24'
-
-  transmission:
-    container_name: transmission
-    image: linuxserver/transmission:4.0.3
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - USER=admin
-      - PASS=transmission
-    ports:
-      - 9091:9091
-      - 51413:51413
-      - 51413:51413/udp
-    volumes:
-      - /config:/storage
-      - /jelly:/jelly
-    restart: always
-    networks:
-      - media-network
-
+    
   radarr:
     container_name: radarr
     image: lscr.io/linuxserver/radarr:4.5.2
@@ -93,24 +58,6 @@ services:
       - /jelly:/jelly
     ports:
       - 8989:8989
-    restart: always
-    networks:
-      - media-network
-
-  jellyfin:
-    image: linuxserver/jellyfin:10.8.10
-    container_name: jellyfin
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-    volumes:
-      - /config:/storage
-      - /jelly:/jelly
-    ports:
-      - 8096:8096
-      - 7359:7359/udp
-      - 8920:8920
     restart: always
     networks:
       - media-network
