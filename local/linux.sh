@@ -2,7 +2,7 @@
 # Author   : github.com/trevor256
 # Summary  : install and configure applications for linux desktop or server.
 # Supported: Debian
-    CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg  shellcheck \
+    CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg shellcheck \
               ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim"
     DESKTOP_APPS="krita inkscape blender kdenlive obs-studio audacity chromium nmap tshark maven gradle"
     NPM_APPS="nodemon bash-language-server"
@@ -73,13 +73,22 @@ _server(){
     echo "export PATH=\$PATH:/root/nvidia/ffmpeg" >> ~/.bashrc
     source ~/.bashrc
 
-    curl https://repo.jellyfin.org/install-debuntu.sh | sudo bash
+#email/text notification
+#gitlab
+#nextcloud
+#Qmue test remote pc
+#Web server (custom)
+
+    curl https://repo.jellyfin.org/install-debuntu.sh | bash
 
     sed -i 's/^ControlPort=.*/ControlPort=8081/' /path/to/nzbget.conf
     
+    transmission-daemon
     service transmission-daemon stop
+    transmission-daemon --download-dir "your-download-directory-path"
     sed -i 's/"rpc-port":.*/"rpc-port": 9091,/' /path/to/settings.json
     sudo service transmission-daemon start
+    #transmission-remote -l
 
 printf "
     version: "3.9"
@@ -292,7 +301,26 @@ _security(){
         rkhunter -c --enable all --disable none
         lynis
 }
+_router() {
+    apt install hostapd dnsmasq iptables-persistent
+        /etc/network/interfaces
+            iface eth1 inet static
+            address 192.168.1.1
+            netmask 255.255.255.0
+        /etc/dnsmasq.conf
+            interface=eth1
+            dhcp-range=192.168.1.50,192.168.1.150,12h
+        /etc/sysctl.conf
+            net.ipv4.ip_forward=1
+        sysctl -p
+        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+        netfilter-persistent save
 
+        /etc/hostapd/hostapd.conf
+        Enable and start hostapd service.
+        Restart networking services or reboot the system.
+        tc badwith control?
+}
 main() {
     echo "debian_desktop(dd), debian_server(ds" #,debian_cloud_server(dcs), custom(c)"
     read -r -p "what kind of computer set up? " choice
