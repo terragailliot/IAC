@@ -1,10 +1,7 @@
 #!/bin/bash
 # Author   : github.com/trevor256
-# Summary  : install and configure applications for a desktop, server.
+# Summary  : install and configure applications for linux desktop or server.
 # Supported: Debian
-#
-# fgqargRGQARGAERGARGARGFARGFASRGARGARSGAERGQAEWRGWQERGWERGWE
-#
     CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg  shellcheck \
               ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim"
     DESKTOP_APPS="krita inkscape blender kdenlive obs-studio audacity chromium nmap tshark maven gradle"
@@ -54,17 +51,15 @@ _server(){
     add_to_fstab "16cc2161-d654-4cf4-a954-a7d61892d08c" "/storage" "ext4" "defaults" "0" "0"
     systemctl daemon-reload && mount --all
 
-    apt install -y nvidia-cuda-toolkit nvidia-driver nvidia-container-toolkit
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-    && curl -s -L https://nvidia.github.io/libnvidia-container/debian11/libnvidia-container.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt update
-    nvidia-ctk runtime configure --runtime=docker
+    apt -y install nvidia-cuda-toolkit nvidia-driver nvidia-container-toolkit build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev \
+    libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev \
+    libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg 
+    curl -s -L https://nvidia.github.io/libnvidia-container/debian12/libnvidia-container.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    apt update && nvidia-ctk runtime configure --runtime=docker
     systemctl restart docker
 
-    apt update
-    apt -y install build-essential pkg-config checkinstall git libfaac-dev libgpac-dev ladspa-sdk-dev libunistring-dev libbz2-dev libjack-jackd2-dev libmp3lame-dev libsdl2-dev libopencore-amrnb-dev libopencore-amrwb-dev libvpx-dev libx264-dev libx265-dev libxvidcore-dev libopenal-dev libopus-dev libsdl1.2-dev libtheora-dev libva-dev libvdpau-dev libvorbis-dev libx11-dev libxfixes-dev texi2html yasm zlib1g-dev build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
     mkdir -p ~/nvidia/ && cd ~/nvidia/
     git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
     cd nv-codec-headers && make install
@@ -82,6 +77,119 @@ _server(){
     make -j "$(nproc)"
     echo "export PATH=\$PATH:/root/nvidia/ffmpeg" >> ~/.bashrc
     source ~/.bashrc
+
+    sed -i 's/^ControlPort=.*/ControlPort=8081/' /path/to/nzbget.conf
+    
+    service transmission-daemon stop
+    sed -i 's/"rpc-port":.*/"rpc-port": 9091,/' /path/to/settings.json
+    sudo service transmission-daemon start
+
+
+
+printf "
+    version: "3.9"
+name: media-stack
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=YOUR_EMAIL"
+      - "--certificatesresolvers.myresolver.acme.storage=acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
+    networks:
+      - media-network
+    restart: always
+    
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:4.5.2
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - 7878:7878
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    restart: always
+    networks:
+      - media-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.yourdomain.com`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=myresolver"
+
+  sonarr:
+    image: linuxserver/sonarr:4.0.0-develop
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+      - /jelly:/jelly
+    ports:
+      - 8989:8989
+    restart: always
+    networks:
+      - media-network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+    ports:
+      - 9696:9696
+    restart: always
+    networks:
+      - media-network
+
+  requestrr:
+    image: lscr.io/linuxserver/requestrr:latest
+    container_name: requestrr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /config:/storage
+    ports:
+      - 4545:4545
+    restart: always
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge 
+    "> /etc/systemd/system/minecraft.service 
+
+
+
+
+
     
     MOD_URL="https://cdn.modrinth.com/data/gvQqBUqZ/versions/2KMrj5c1/lithium-fabric-mc1.20-0.11.2.jar https://cdn.modrinth.com/data/P7dR8mSH/versions/n2c5lxAo/fabric-api-0.83.0%2B1.20.jar"
     wget -O  fabric.jar https://meta.fabricmc.net/v2/versions/loader/1.20.2/0.14.24/0.11.2/server/jar &
