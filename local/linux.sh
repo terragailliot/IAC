@@ -2,6 +2,14 @@
 # Author   : github.com/trevor256
 # Summary  : install and configure applications for linux desktop or server.
 # Supported: Debian
+    NORDVPN_USERNAME='your_username'
+    NORDVPN_PASSWORD='your_password'
+    4kvideodownloaderplus=
+    atlauncher=
+    steam=
+    discord=
+    source ~/.bashrc
+
     CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg shellcheck \
               ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim"
     DESKTOP_APPS="krita inkscape blender kdenlive obs-studio audacity chromium nmap tshark maven gradle"
@@ -24,7 +32,6 @@ _desktop() {
 _server(){
     sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     apt update && apt install -y $CLI_APPS
-    curl -OJ $ICON_URL #must be 64x64 server-icon.png
     #0 3 * * 5 /path/to/your/maintancescript.sh
     systemctl disable NetworkManager-wait-online.service #-6 seconds #bootsystemd-analyze blame
     grep -rl GRUB_TIMEOUT=5 /etc/default/grub | xargs sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' && update-grub2 #-10 seconds 
@@ -190,12 +197,11 @@ networks:
     driver: bridge 
     "> /etc/systemd/system/minecraft.service 
 
-
-
-
-
-    
+    mkdir -p minecraft
     MOD_URL="https://cdn.modrinth.com/data/gvQqBUqZ/versions/2KMrj5c1/lithium-fabric-mc1.20-0.11.2.jar https://cdn.modrinth.com/data/P7dR8mSH/versions/n2c5lxAo/fabric-api-0.83.0%2B1.20.jar"
+    wget -O image.jpg https://pbs.twimg.com/media/E17dVsuVEAIpea1.jpg
+    ffmpeg -i image.jpg -vf "crop=220:220:90:90" output.jpg
+    ffmpeg -i output.jpg -vf "scale=64:64" server-icon.png
     wget -O  fabric.jar https://meta.fabricmc.net/v2/versions/loader/1.20.2/0.14.24/0.11.2/server/jar &
     wget -O /mods $MOD_URL &
     echo 'eula=true' >> eula.txt 
