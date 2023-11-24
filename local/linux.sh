@@ -11,7 +11,7 @@
     source ~/.bashrc
 
     CLI_APPS="default-jdk default-jre nodejs npm transmission-cli tree rsync ripgrep fzf curl ffmpeg shellcheck \
-              ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim"
+              ufw fail2ban rkhunter lynis libpam-tmpdir needrestart nzbget ca-certificates curl gnupg nvim nginx"
     DESKTOP_APPS="krita inkscape blender kdenlive obs-studio audacity chromium nmap tshark maven gradle"
     NPM_APPS="nodemon bash-language-server"
     
@@ -79,6 +79,30 @@ _server(){
     make -j "$(nproc)"
     echo "export PATH=\$PATH:/root/nvidia/ffmpeg" >> ~/.bashrc
     source ~/.bashrc
+    
+systemctl start nginx
+systemctl enable nginx
+nano /etc/nginx/sites-available/jellyfin
+printf "server {
+    listen 80;
+    server_name t256.net;
+
+    location / {
+        proxy_pass http://localhost:8096;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+"
+ln -s /etc/nginx/sites-available/jellyfin /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+
+apt install certbot python3-certbot-nginx
+certbot --nginx -d t256.net
+certbot renew --dry-run
 
 #email/text notification
 #gitlab
