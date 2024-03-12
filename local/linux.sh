@@ -3,11 +3,11 @@
 # Summary  : install and configure applications for linux desktop or server.
 # Supported: Debian
 
-        NORD_TOKEN="e9f2ab55a36bab05c5289619cff0f21daaf67aaf0e7ef2adee3c079ab2b0bf58"
-          GIT_NAME="trevor256"
-         GIT_EMAIL="256trevor@gmail.com"
-           AWS_KEY="AKIAZKE56ACEK75CPM44"
-       AWS_SEC_KEY="50RYtfcEfq4S0BV+cypM9VEDsUSjZY0g/ewsytV1"
+        NORD_TOKEN=""
+          GIT_NAME=""
+         GIT_EMAIL=""
+           AWS_KEY=""
+       AWS_SEC_KEY=""
 
 
           CLI_APPS="default-jdk default-jre nodejs npm transmission-cli transmission-common transmission-daemon tree rsync \
@@ -21,7 +21,7 @@ SERVER_STORAGE_DIR="/storage"
       NZB_MAIN_DIR1="/jelly/nzbget"
           NZB_HOST1="news.newsgroupdirect.com"
       NZB_USERNAME1="etk385654366"
-      NZB_PASSWORD1="Imavideogametester135@@"
+      NZB_PASSWORD1=""
 
 _kbuntu() {
 
