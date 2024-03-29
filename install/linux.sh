@@ -2,22 +2,21 @@
 # Author   : trevor
 # Summary  : install and configure linux.
 
-        NORD_TOKEN="e9f2ab55a36bab05c5289619cff0f21daaf67aaf0e7ef2adee3c079ab2b0bf58"
-           AWS_KEY=""
-       AWS_SEC_KEY=""
-
-
-    SOFTWARE_LANGS="default-jdk default-jre maven gradle nodejs npm python3 python3-pip python3-venv golang"
+    SOFTWARE_LANGS="default-jdk default-jre maven gradle nodejs npm python3 python3-pip python3-venv"
           
-          CLI_APPS="rsync curl fail2ban ufw needrestart ca-certificates gnupg ripgrep ffmpeg"
+          CLI_APPS="rsync curl fail2ban ufw ca-certificates gnupg ripgrep ffmpeg"
 
-         DESK_APPS="krita inkscape blender obs-studio audacity chromium mpv"
+         SNAPS="krita inkscape obs-studio audacity chromium discord zoom-client steam beekeeper-studio"
 
-_ubuntu(){
+
+_kubuntu(){
+    apt update && apt -y upgrade
     apt install -y $SOFTWARE_LANGS $CLI_APPS
-    snap install krita inkscape blender obs-studio audacity chromium mpv steam discord polymc
+    snap install $SNAPS
     snap install blender --classic
-    
+    wget -O 4kvideodownloaderplus.deb https://www.4kdownload.com/thanks-for-downloading?source=videodownloaderplus
+    dpkg -i 4kvideodownloaderplus.deb
+   
 }
 _cloud9(){ 
     apt update && apt -y upgrade
@@ -32,11 +31,23 @@ _server() {
     apt install -y $CLI_APPS
 }
 
+ _nvim(){   
+    apt install neovim
+    mkdir -p ~/.config/nvim
+    echo "set number" > ~/.config/nvim/init.vim
+    echo "syntax on" >> ~/.config/nvim/init.vim
+    echo "set mouse=a" >> ~/.config/nvim/init.vim
+    curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    echo "call plug#begin('~/.local/share/nvim/plugged')" >> ~/.config/nvim/init.vim
+    echo "Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }" >> ~/.config/nvim/init.vim
+    echo "Plug 'junegunn/goyo.vim'" >> ~/.config/nvim/init.vim
+    echo "call plug#end()" >> ~/.config/nvim/init.vim
+}
+
 _drives() {  
-SERVER_MEDIA_DIR="/drives/vids/movies /drives/vids/shows /drives/vids/x /drives/jelly/downloads /drives/jelly/nzbget /drives/jelly/music /drives/jelly/other /drives/jelly/configs"
-SERVER_STORAGE_DIR="/storage"
+    SERVER_SUB_DIR="/drives/vids/movies /drives/vids/shows /drives/vids/x /drives/services/downloads /drives/services/nzbget /drives/services/music /drives/services/configs"
     mkdir -p /drives 
-    mkdir -p /drives/vids /drives/jelly /drives/storage
+    mkdir -p /drives/vids /drives/services /drives/storage
     add_to_fstab() {
       local uuid=$1
       local mount_point=$2
@@ -50,11 +61,11 @@ SERVER_STORAGE_DIR="/storage"
         echo "UUID entry for $uuid already exists in /etc/fstab."
       fi
     }
-    add_to_fstab "9067c3d0-babc-4ffa-b8b9-4212a4fe4cea" "/drives/jelly" "ext4" "defaults" "0" "0"
+    add_to_fstab "9067c3d0-babc-4ffa-b8b9-4212a4fe4cea" "/drives/services" "ext4" "defaults" "0" "0"
     add_to_fstab "16cc2161-d654-4cf4-a954-a7d61892d08c" "/drives/storage" "ext4" "defaults" "0" "0"
     add_to_fstab "a83b1184-484c-4086-96cd-80fe60b3cba0" "/drives/vids" "ext4" "defaults" "0" "0"
     systemctl daemon-reload && mount --all
-    mkdir -p $SERVER_MEDIA_DIR
+    mkdir -p $SERVER_SUB_DIR
 }
 
 _samba() {
@@ -97,29 +108,8 @@ _samba() {
       systemctl restart smbd
 }
 
-_jelly() {
-    apt install -y ffmpeg
+_jellyfin() {
     curl https://repo.jellyfin.org/install-debuntu.sh | bash
-}
-
-_downloaders() {
-    apt install -y unzip unrar nzbget transmission-cli transmission-common transmission-daemon 
-    sed -i "s|^MainDir=.*|MainDir=$NZB_MAIN_DIR1|" /etc/nzbget.conf
-    sed -i "s|^Server1.Name=.*|Server1.Name=newshosting|" /etc/nzbget.conf
-    sed -i "s|^Server1.Host=.*|Server1.Host=$NZB_HOST1|" /etc/nzbget.conf
-    sed -i "s|^Server1.Username=.*|Server1.Username=$NZB_USERNAME1|" /etc/nzbget.conf
-    sed -i "s|^Server1.Password=.*|Server1.Password=$NZB_PASSWORD1|" /etc/nzbget.conf
-    sed -i "s|^Server1.Encryption=.*|Server1.Encryption=yes|" /etc/nzbget.conf
-    sed -i "s|^Server1.Port=.*|Server1.Port=563|" /etc/nzbget.conf
-    sed -i "s|^ControlIP=.*|ControlIP=0.0.0.0|" /etc/nzbget.conf
-    nzbget -D
-
-    systemctl stop transmission-daemon
-    sed -i 's|"download-queue-size":.*|"download-queue-size": 10,|' /var/lib/transmission-daemon/info/settings.json
-    sed -i 's|"download-dir":.*|"download-dir": "/jelly/downloads",|' /var/lib/transmission-daemon/info/settings.json
-    sed -i 's|"rpc-authentication-required":.*|"rpc-authentication-required": false,|' /var/lib/transmission-daemon/info/settings.json
-    sed -i 's|"rpc-whitelist-enabled":.*|"rpc-whitelist-enabled": false,|' /var/lib/transmission-daemon/info/settings.json
-    systemctl enable --now transmission-daemon
 }
 
 _nginx() {
@@ -134,7 +124,7 @@ server {
 
 # HTTPS server block for the main site and Jellyfin
 server {
-    listen 443 ssl http2;
+    #listen 443 ssl http2;
     server_name t256.net;
 
     # SSL configuration # comment un comment
@@ -172,19 +162,32 @@ server {
 }
 
 _docker() {
-  sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y
-sudo apt update
-sudo apt install docker-ce -y
-sudo usermod -aG docker ${USER}
-sudo systemctl enable docker
-
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io
+curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose | chmod +x /usr/local/bin/docker-compose
 
 }
+
+_downloaders() {
+
+    
+    sed -i "s|^MainDir=.*|MainDir=$NZB_MAIN_DIR1|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Name=.*|Server1.Name=newshosting|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Host=.*|Server1.Host=$NZB_HOST1|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Username=.*|Server1.Username=$NZB_USERNAME1|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Password=.*|Server1.Password=$NZB_PASSWORD1|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Encryption=.*|Server1.Encryption=yes|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^Server1.Port=.*|Server1.Port=563|" /drives/services/configs/nzbget/nzbget.conf
+    sed -i "s|^ControlIP=.*|ControlIP=0.0.0.0|" /drives/services/configs/nzbget/nzbget.conf
+
+    sed -i 's|"download-queue-size":.*|"download-queue-size": 10,|' /drives/services/configs/transmission/settings.json
+    sed -i 's|"download-dir":.*|"download-dir": "/drives/services/downloads/transmission",|' /drives/services/configs/transmission/settings.json
+    sed -i 's|"rpc-authentication-required":.*|"rpc-authentication-required": false,|' /drives/services/configs/transmission/settings.json
+    sed -i 's|"rpc-whitelist-enabled":.*|"rpc-whitelist-enabled": false,|' /drives/services/configs/transmission/settings.json
+}
+
 
 _compose() {
 sh -c "printf '
@@ -198,8 +201,8 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /jelly/movies:/movies
-      - /jelly/configs/radarr:/config
+      - /drives/vids/movies:/movies
+      - /drives/services/configs/radarr:/config
     ports:
       - 7878:7878
     restart: always
@@ -212,8 +215,8 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /jelly/shows:/tv
-      - /jelly/configs/sonarr:/config
+      - /drives/vids/shows:/tv
+      - /drives/services/configs/sonarr:/config
     ports:
       - 8989:8989
     restart: always
@@ -226,7 +229,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /jelly/configs/prowlarr:/config
+      - /drives/services/configs/prowlarr:/config
     ports:
       - 9696:9696
     restart: always
@@ -239,7 +242,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /jelly/configs/requestrr:/config
+      - /drives/services/configs/requestrr:/config
     ports:
       - 4545:4545
     restart: always
@@ -252,130 +255,54 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /jelly/x:/adult
-      - /jelly/configs/whisparr:/config
+      - /drives/vids/x:/x
+      - /drives/services/configs/whisparr:/config
     ports:
-      - "6969:6969"
+      - 6969:6969
     restart: always
 
-  lidarr:
-    image: ghcr.io/hotio/lidarr
-    container_name: lidarr
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
     environment:
       - PUID=1000
       - PGID=1000
-      - UMASK=002
       - TZ=Etc/UTC
     volumes:
-      - /jelly/configs/lidarr:/config
-      - /jelly/music:/data
+      - /drives/services/configs/transmission:/config
+      - /drives/services/downloads/transmission:/downloads
     ports:
-      - "8686:8686"
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    restart: always
+
+  nzbget:
+    image: linuxserver/nzbget
+    container_name: nzbget
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/nzbget:/config
+      - /drives/services/downloads/nzbget:/downloads
+    ports:
+      - 6789:6789
     restart: always
 
 networks:
   media-network:
     driver: bridge
+
 ' > /docker-compose.yml"
-docker-compose -f docker-compose.yml up -d
-
-
-apt install -y nginx certbot python3-certbot-nginx
-      systemctl enable --now nginx
-      printf "
-    server {
-        listen 80;
-        server_name t256.net;
-        return 301 https://\$host\$request_uri;
-    }
-
-    server {
-        # listen 443 ssl http2; #comment
-        server_name t256.net;
-
-        # SSL configuration #commentall
-        ssl_certificate /etc/letsencrypt/live/t256.net/fullchain.pem; 
-        ssl_certificate_key /etc/letsencrypt/live/t256.net/privkey.pem;
-        include /etc/letsencrypt/options-ssl-nginx.conf;
-        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-        # Root location for the website
-        location / {
-            root /var/www/html;
-            index index.html index.htm;
-            try_files \$uri \$uri/ =404;
-        }
-
-        location /jelly {
-            proxy_pass http://192.168.1.2:8096;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade \$http_upgrade;
-            proxy_set_header Connection "upgrade";
-        }
-    }" | tee /etc/nginx/sites-available/jellyfin >> /dev/null
-      ln -s /etc/nginx/sites-available/jellyfin /etc/nginx/sites-enabled/
-      rm /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-
-    certbot --nginx -d t256.net
-    nginx -t
-    systemctl restart nginx
-    certbot renew --dry-run
-    #uncomment and reprintf restart
-
-  printf '
-  #!/bin/bash
-  NZB_MAIN_DIR1="/jelly/nzbget"
-  NZB_HOST1="news.newsgroupdirect.com"
-  NZB_USERNAME1="etk385654366"
-  NZB_PASSWORD1="Imavideogametester135@@"
-
-  sed -i "s|^MainDir=.*|MainDir=${NZB_MAIN_DIR1}|" /etc/nzbget.conf
-  sed -i "s|^Server1.Name=.*|Server1.Name=newshosting|" /etc/nzbget.conf
-  sed -i "s|^Server1.Host=.*|Server1.Host=${NZB_HOST1}|" /etc/nzbget.conf
-  sed -i "s|^Server1.Username=.*|Server1.Username=${NZB_USERNAME1}|" /etc/nzbget.conf
-  sed -i "s|^Server1.Password=.*|Server1.Password=${NZB_PASSWORD1}|" /etc/nzbget.conf
-  sed -i "s|^Server1.Encryption=.*|Server1.Encryption=yes|" /etc/nzbget.conf
-  sed -i "s|^Server1.Port=.*|Server1.Port=563|" /etc/nzbget.conf
-  sed -i "s|^ControlIP=.*|ControlIP=0.0.0.0|" /etc/nzbget.conf
-  nzbget -D
-
-  systemctl stop transmission-daemon
-  sed -i "s|\"download-queue-size\":.*|\"download-queue-size\": 10,|" /var/lib/transmission-daemon/info/settings.json
-  sed -i "s|\"download-dir\":.*|\"download-dir\": \"/jelly/downloads\",|" /var/lib/transmission-daemon/info/settings.json
-  sed -i "s|\"rpc-authentication-required\":.*|\"rpc-authentication-required\": false,|" /var/lib/transmission-daemon/info/settings.json
-  sed -i "s|\"rpc-whitelist-enabled\":.*|\"rpc-whitelist-enabled\": false,|" /var/lib/transmission-daemon/info/settings.json
-  systemctl enable --now transmission-daemon
-  ' | tee /customize.sh >> /dev/null
-
-  chmod +x customize.sh
+docker-compose -f /docker-compose.yml up -d
 }
 
-_desktop(){
-    apt install -y $CLI_APPS $DESK_APPS
-    wget -O discord.deb "https://discordapp.com/api/download?platform=linux&format=deb"
-    wget -O jetbrains-toolbox-2.1.0.18144.tar.gz https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.1.0.18144.tar.gz
-    wget -O steam.deb https://cdn.akamai.steamstatic.com/client/installer/steam.deb
-    wget -O 4kvideodownloaderplus_1.5.0-1_amd64.deb https://dl.4kdownload.com/app/4kvideodownloaderplus_1.5.0-1_amd64.deb?source=website
-    wget -O atlauncher.deb https://atlauncher.com/download/deb
-    tar -xzf jetbrains-toolbox-2.1.0.18144.tar.gz
-    dpkg -i discord.deb steam.deb 4kvideodownloaderplus_1.5.0-1_amd64.deb atlauncher.deb
-    
-    mkdir -p ~/.config/nvim
-    echo "set number" > ~/.config/nvim/init.vim
-    echo "syntax on" >> ~/.config/nvim/init.vim
-    echo "set mouse=a" >> ~/.config/nvim/init.vim
-    curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    echo "call plug#begin('~/.local/share/nvim/plugged')" >> ~/.config/nvim/init.vim
-    echo "Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }" >> ~/.config/nvim/init.vim
-    echo "Plug 'junegunn/goyo.vim'" >> ~/.config/nvim/init.vim
-    echo "call plug#end()" >> ~/.config/nvim/init.vim
-}
 
 _cloud() {
+       AWS_KEY=""
+       AWS_SEC_KEY=""
         # aws configure
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip awscliv2.zip
