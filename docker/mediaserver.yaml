@@ -1,0 +1,165 @@
+version: "3.9"
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    volumes:
+      - /drives/services/configs/nginx/nginx.conf:/nginx/nginx.conf
+      - /drives/services/configs/nginx/letsencrypt:/letsencrypt
+      - /drives/services/configs/nginx/www:/var/www/html
+    ports:
+      - "8888:8888"
+      - "443:443"
+    restart: always
+    depends_on:
+      - certbot
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /drives/services/configs/nginx/letsencrypt:/etc/letsencrypt
+      - /drives/services/configs/nginx/www:/var/www/html
+    entrypoint: '/bin/sh -c "trap exit TERM; while :; do sleep 6h & wait $$!; certbot renew; done;"'
+
+  certbot-init:
+    image: certbot/certbot
+    container_name: certbot-init
+    volumes:
+      - /drives/services/configs/nginx/letsencrypt:/etc/letsencrypt
+      - /drives/services/configs/nginx/www:/var/www/html
+    entrypoint: '/bin/sh -c "certbot certonly --webroot -w /var/www/html -d terraaa.com -d www.terraaa.com --email you@example.com --agree-tos --no-eff-email; cp /etc/letsencrypt/live/terraaa.com/privkey.pem /etc/letsencrypt/live/terraaa.com/privkey-backup.pem"'
+
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:4.5.2
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/vids/movies:/movies
+      - /drives/services/configs/radarr:/config
+    ports:
+      - 7878:7878
+    networks:
+      - media-network
+    restart: always
+
+  sonarr:
+    image: linuxserver/sonarr:4.0.0-develop
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/vids/shows:/tv
+      - /drives/services/configs/sonarr:/config
+    ports:
+      - 8989:8989
+    networks:
+      - media-network
+    restart: always
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/prowlarr:/config
+    ports:
+      - 9696:9696
+    networks:
+      - media-network
+    restart: always
+
+  requestrr:
+    image: lscr.io/linuxserver/requestrr:latest
+    container_name: requestrr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/requestrr:/config
+    ports:
+      - 4545:4545
+    networks:
+      - media-network
+    restart: always
+
+  whisparr:
+    image: hotio/whisparr
+    container_name: whisparr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/vids/x:/x
+      - /drives/services/configs/whisparr:/config
+    ports:
+      - 6969:6969
+    networks:
+      - media-network
+    restart: always
+
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/transmission:/config
+      - /drives/services/downloads/transmission:/downloads
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    networks:
+      - media-network
+    restart: always
+
+  nzbget:
+    image: linuxserver/nzbget
+    container_name: nzbget
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/nzbget:/config
+      - /drives/services/downloads/nzbget:/downloads
+    ports:
+      - 6789:6789
+    networks:
+      - media-network
+    restart: always
+
+  jellyfin:
+    image: linuxserver/jellyfin:amd64-latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /drives/services/configs/jellyfin:/configs
+      - /drives/vids:/vids
+    ports:
+      - 8096:8096
+      - 7359:7359/udp
+      - 8920:8920
+    networks:
+      - media-network
+    restart: always
+
+networks:
+  media-network:
+    driver: bridge
