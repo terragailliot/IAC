@@ -4,7 +4,7 @@
 
     SOFTWARE_LANGS="default-jdk default-jre maven gradle nodejs npm python3 python3-pip python3-venv"
           
-          CLI_APPS="rsync curl fail2ban ufw ca-certificates gnupg ripgrep ffmpeg samba samba-common-bin software-properties-common docker-compose docker.io certbot python3-certbot-nginx"
+          CLI_APPS="rsync curl fail2ban ufw ca-certificates gnupg ripgrep ffmpeg samba samba-common-bin"
 
          APT="krita inkscape obs-studio audacity chromium discord zoom-client steam beekeeper-studio"
 
@@ -18,25 +18,38 @@
     sudo ufw allow 443/tcp
     sudo ufw reload
     sudo certbot --nginx -d terraaa.com -d www.terraaa.com
-   
-    sudo mkdir -p /var/www/terraaa.com/html
-    sudo chown -R $USER:$USER /var/www/terraaa.com/html
-    sudo chmod -R 755 /var/www/terraaa.com
-    echo "<html><head><title>Welcome to Terraaa.com!</title></head><body><h1>Success! Your website is working!</h1></body></html>" | sudo tee /var/www/terraaa.com/html/index.html
-    sudo nano /etc/nginx/sites-available/terraaa.com
-    sudo ln -s /etc/nginx/sites-available/terraaa.com /etc/nginx/sites-enabled/
 
  _nvim(){   
-    apt install neovim
-    mkdir -p ~/.config/nvim
-    echo "set number" > ~/.config/nvim/init.vim
-    echo "syntax on" >> ~/.config/nvim/init.vim
-    echo "set mouse=a" >> ~/.config/nvim/init.vim
-    curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    echo "call plug#begin('~/.local/share/nvim/plugged')" >> ~/.config/nvim/init.vim
-    echo "Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }" >> ~/.config/nvim/init.vim
-    echo "Plug 'junegunn/goyo.vim'" >> ~/.config/nvim/init.vim
-    echo "call plug#end()" >> ~/.config/nvim/init.vim
+
+# Install Neovim
+sudo apt install neovim
+
+# Install Vim-Plug for plugin management
+curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs \
+       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+# Create Neovim configuration directory if it doesn't exist
+mkdir -p ~/.config/nvim
+
+# Create Neovim configuration file if it doesn't exist
+touch ~/.config/nvim/init.vim
+
+# Configure Neovim with plugins and settings
+cat << EOF >> ~/.config/nvim/init.vim
+call plug#begin('~/.config/nvim/plugged')
+" NERDTree plugin
+Plug 'preservim/nerdtree'
+" Vim-Fugitive plugin for Git integration
+Plug 'tpope/vim-fugitive'
+call plug#end()
+
+" Enable mouse support
+set mouse=a
+EOF
+
+# Install plugins using Vim-Plug
+nvim -c 'PlugInstall' -c 'qa!'
+
 }
 
 _drives() {  
