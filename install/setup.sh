@@ -1,15 +1,12 @@
 #!/bin/bash
 # Author   : trevor
 # Summary  : install and configure linux.
-
-    SOFTWARE_LANGS="default-jdk default-jre maven gradle nodejs npm python3 python3-pip python3-venv"
-          
-          CLI_APPS="rsync fail2ban ripgrep ffmpeg"
-
-         APT="krita inkscape obs-studio audacity chromium discord zoom-client steam beekeeper-studio"
+        
+        CLI_APPS="ffmpeg gradle nodejs npm"
+        APT="krita inkscape obs-studio audacity chromium steam"
 
     apt update && apt -y upgrade
-    apt install -y $SOFTWARE_LANGS $CLI_APPS
+    apt install -y $CLI_APPS
     wget -O 4kvideodownloaderplus.deb https://www.4kdownload.com/thanks-for-downloading?source=videodownloaderplus
     dpkg -i 4kvideodownloaderplus.deb
 
