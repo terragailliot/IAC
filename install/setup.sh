@@ -4,7 +4,7 @@
 
     SOFTWARE_LANGS="default-jdk default-jre maven gradle nodejs npm python3 python3-pip python3-venv"
           
-          CLI_APPS="rsync curl fail2ban ufw ca-certificates gnupg ripgrep ffmpeg samba samba-common-bin"
+          CLI_APPS="rsync fail2ban ripgrep ffmpeg"
 
          APT="krita inkscape obs-studio audacity chromium discord zoom-client steam beekeeper-studio"
 
