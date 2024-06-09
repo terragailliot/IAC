@@ -28,7 +28,7 @@ services:
     volumes:
       - /drives/services/configs/nginx/letsencrypt:/etc/letsencrypt
       - /drives/services/configs/nginx/www:/var/www/html
-    entrypoint: '/bin/sh -c "certbot certonly --webroot -w /var/www/html -d terraaa.com -d www.terraaa.com --email you@example.com --agree-tos --no-eff-email; cp /etc/letsencrypt/live/terraaa.com/privkey.pem /etc/letsencrypt/live/terraaa.com/privkey-backup.pem"'
+    entrypoint: '/bin/sh -c "certbot certonly --webroot -w /var/www/html -d terraaa.com -d www.terraaa.com --email terragailliot@gmail.com --agree-tos --no-eff-email; cp /etc/letsencrypt/live/terraaa.com/privkey.pem /etc/letsencrypt/live/terraaa.com/privkey-backup.pem"'
 
   radarr:
     container_name: radarr
